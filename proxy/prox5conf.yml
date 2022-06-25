@@ -1,0 +1,9 @@
+proxyport: 4121
+version: 1
+router:
+  ip: "192.168.178.38"
+  port: 3031
+protocols:
+  http:
+    ae: 4162
+    local: 80
