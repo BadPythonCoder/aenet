@@ -32,3 +32,5 @@ class AEConn:
     self.s.send(data)
   def recv(self, buffer=1024):
     return self.s.recv(buffer)
+  def close(self):
+    self.s.close()

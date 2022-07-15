@@ -5,21 +5,11 @@ obj = yaml.load(f,yaml.CLoader)
 
 class Proxy:
   def __init__(self):
-    self.username = "CoderlolAEPROX"
-    self.password = "AENETPROX"
     self.host = "0.0.0.0"
-    self.port = 7121
+    self.port = obj["proxyport"]
     self.PROXVER = b'\x05' 
     self.IPV4REGEX = "\d+\.\d+\.\d+\.\d+"
     self.IPV6REGEX = "([abcdef0-9]{4}:){7}[abcdef0-9]{4}"
-  # def convIPv4(self,ip):
-  #   final = b''
-  #   for n in ip.split("."):
-  #     final += int.to_bytes(int(n), 1, "big")
-  #   return final
-  # def convIPv6(self, ip):
-  #   final = b''
-  #   for 
   def upstream(self, conn, other):
     try:
       while True:
@@ -47,35 +37,13 @@ class Proxy:
   def handler(self, conn):
     ver = conn.recv(1)
     if not ver == self.PROXVER:
-      print("OHNO!")
-      print(ver)
-      print(self.PROXVER)
       conn.close()
       return False
     nauth = int.from_bytes(conn.recv(1),"little")
     auth = conn.recv(nauth)
-    print(auth)
-    if b'\x02' in auth:
-      conn.send(self.PROXVER+b'\x02')
-      ver = conn.recv(1)
-      NUSR = int.from_bytes(conn.recv(1),"little")
-      USR = conn.recv(NUSR).decode("utf-8")
-      NPAS = int.from_bytes(conn.recv(1),"little")
-      PAS = conn.recv(NPAS).decode("utf-8")
-      if USR == self.username and PAS == self.password:
-        conn.send(self.PROXVER+b'\x00')
-      else:
-        print(USR)
-        print(self.username)
-        print(PAS)
-        print(self.password)
-        conn.send(self.PROXVER+b'\xff')
-        conn.close()
-        return False
-    elif b'\x00' in auth:
+    if b'\x00' in auth:
       conn.send(self.PROXVER+b'\x00')
     else:
-      print("NO CONNECTION")
       conn.send(self.PROXVER+b'\xff')
       conn.close()
       return False
@@ -84,14 +52,11 @@ class Proxy:
     cmd = conn.recv(1)
     _ = conn.recv(1)
     addr, _ = self.get_address(conn)
-    print(addr)
     port = int.from_bytes(conn.recv(2),"big")
-    print(port)
     try:
       if addr.endswith(".ae"):
-        print("AETHER!!!!!!")
         cmd = b'\x69'
-      print("cmd",cmd)
+        print("aether detected")
       if cmd == b'\x01':
         other = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         other.connect((addr,port))
@@ -106,11 +71,9 @@ class Proxy:
           binded_addr = b'\x04'+socket.inet_aton(binded_addr)
         else:
           binded_addr = b'\x03'+int.to_bytes(len(binded_addr),"little")+binded_addr.encode("utf-8")
-        print(binded_addr)
         binded_port = int.to_bytes(binded_port,2,"big")
         # print(self.PROXVER+b'\x00\x00'+binded_addr+int.to_bytes(binded_addr[1],2,"big"))
         conn.send(self.PROXVER+b'\x00\x00'+binded_addr+binded_port)
-        print(self.PROXVER+b'\x00\x00'+binded_addr+binded_port)
         upstreamT = threading.Thread(target=self.upstream,args=(conn,other,),daemon=True)
         downstreamT = threading.Thread(target=self.downstream,args=(conn, other),daemon=True)
         upstreamT.start()
@@ -123,9 +86,9 @@ class Proxy:
         for k, v in obj["protocols"].items():
           if v["local"] == port:
             protocol = k
+        print(protocol)
         if not addr.split(".")[-2] == "local":
           aetheraddr = addr.split(".")[-2]
-          print(aetheraddr)
           data = json.dumps({"ip":".".join(addr.split(".")[:-2]),"port":obj["protocols"][protocol]["ae"],"aedress":aetheraddr}).encode("utf-8") 
           other = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
           other.connect((obj["router"]["ip"],obj["router"]["port"]))
@@ -137,9 +100,14 @@ class Proxy:
             return
         else:
           other = aenet.AEConn()
+          actualaddr = ".".join(addr.split(".")[:-2])
+          print(actualaddr)
+          status, reason = other.connect(actualaddr,protocol)
+          if not status:
+            print("Connection with server failed: ",reason)
+            return False
+          print("Connection with server established")
           # print(addr.split(".")[:-2])
-        print(".".join(addr.split(".")[:-2]))
-        print(other.connect(".".join(addr.split(".")[:-2]), protocol))
         upstreamT = threading.Thread(target=self.upstream,args=(conn,other,),daemon=True)
         downstreamT = threading.Thread(target=self.downstream,args=(conn, other),daemon=True)
         upstreamT.start()
@@ -154,7 +122,6 @@ class Proxy:
 
   def get_address(self, conn):
     addrtype = conn.recv(1)
-    print(addrtype)
     final = ""
     fbytes = addrtype
     if addrtype == b'\x01':
@@ -178,7 +145,7 @@ class Proxy:
         final += first + second + ":"
       final = final[:-1]
     return final, fbytes
-  def start(self):
+  def startproxy(self):
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.bind((self.host,self.port))
     s.listen(5)
@@ -188,6 +155,14 @@ class Proxy:
       print("[AETHERPROX] New connection, ",addr)
       t = threading.Thread(target=self.handler,args=(conn,),daemon=True)
       t.start()
+  def start(self):
+    threading.Thread(target=self.startproxy,daemon=True).start()
+    try:
+      while True:
+        pass
+    except:
+      print("halting")
+      quit()
 
 proxy = Proxy()
 proxy.start()
