@@ -1,6 +1,6 @@
-import threading, socket, re, aenet, yaml, json
-
-f = open("prox5conf.yml")
+import threading, socket, re, aenet, yaml, json, os
+path = __file__.replace(os.path.basename(__file__),"")+"prox5conf.yml"
+f = open(path)
 obj = yaml.load(f,yaml.CLoader)
 
 class Proxy:
