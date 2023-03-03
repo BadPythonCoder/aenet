@@ -5,7 +5,7 @@ obj = yaml.load(f,yaml.Loader)
 
 class Proxy:
   def __init__(self):
-    self.host = "0.0.0.0"
+    self.host = obj["host"]
     self.port = obj["proxyport"]
     self.PROXVER = b'\x05' 
     self.IPV4REGEX = "\d+\.\d+\.\d+\.\d+"
